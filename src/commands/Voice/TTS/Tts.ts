@@ -1,6 +1,12 @@
 import { Polly, VoiceId } from "@aws-sdk/client-polly";
 import { Readable } from "stream";
-import { ChatInputCommandInteraction, Message, SlashCommandBuilder } from "discord.js";
+import {
+    ChatInputCommandInteraction,
+    InteractionContextType,
+    Message,
+    SlashCommandBuilder,
+    SlashCommandOptionsOnlyBuilder,
+} from "discord.js";
 import { AudioPlayerStatus, createAudioResource } from "@discordjs/voice";
 import Command, { Category } from "../../Command";
 import PlayerManager from "../../../managers/PlayerManager";
@@ -14,17 +20,23 @@ export default class Tts extends Command {
     private readonly DEFAULT_VOICE = VoiceId.Miguel;
     private readonly playerManager = PlayerManager.getInstance();
 
-    public async slashExecutor(interaction: ChatInputCommandInteraction): Promise<void> {
+    public async slashExecutor(
+        interaction: ChatInputCommandInteraction
+    ): Promise<void> {
         const message = interaction.options.getString("message", true);
-        let voice = interaction.options.getString("voice", false) ?? this.DEFAULT_VOICE;
+        let voice =
+            interaction.options.getString("voice", false) ?? this.DEFAULT_VOICE;
         if (!(voice in VoiceId)) voice = this.DEFAULT_VOICE;
         await this.executor(interaction, message, voice as VoiceId);
     }
 
-    public async messageExecutor(message: Message, args: string[]): Promise<void> {
+    public async messageExecutor(
+        message: Message,
+        args: string[]
+    ): Promise<void> {
         let voice: VoiceId = this.DEFAULT_VOICE;
 
-        if (args[0] in VoiceId) {            
+        if (args[0] in VoiceId) {
             voice = args[0] as VoiceId;
             args.shift();
         }
@@ -38,7 +50,9 @@ export default class Tts extends Command {
         voice: VoiceId
     ): Promise<any> {
         if (caller.channel!.isDMBased())
-            return caller.reply("No puedes usar este comando en mensaje directo.");
+            return caller.reply(
+                "No puedes usar este comando en mensaje directo."
+            );
 
         const player = this.playerManager.getOrCreate(caller.guildId!);
         if (player.state.status == AudioPlayerStatus.Playing)
@@ -54,7 +68,8 @@ export default class Tts extends Command {
         const memberId = caller.member!.user.id!;
         const member = await caller.guild!.members.fetch(memberId);
 
-        if (member.voice.channelId == undefined) return caller.reply("Tienes que estar en un canal de voz!");
+        if (member.voice.channelId == undefined)
+            return caller.reply("Tienes que estar en un canal de voz!");
         const voiceChannel = member.voice.channel!;
 
         player.connect(voiceChannel);
@@ -64,20 +79,29 @@ export default class Tts extends Command {
         caller.reply("Leyendo mensaje...");
     }
 
-    public commandBuilder(): Partial<SlashCommandBuilder> {
+    public commandBuilder(): Partial<SlashCommandOptionsOnlyBuilder> {
         return new SlashCommandBuilder()
-            .setDMPermission(false)
+            .setContexts(InteractionContextType.Guild)
             .setName("tts")
             .setDescription("text to speech")
             .addStringOption((option) =>
-                option.setName("message").setDescription("message to read").setRequired(true)
+                option
+                    .setName("message")
+                    .setDescription("message to read")
+                    .setRequired(true)
             )
             .addStringOption((option) =>
-                option.setName("voice").setDescription("Voice to read the message").setRequired(false)
+                option
+                    .setName("voice")
+                    .setDescription("Voice to read the message")
+                    .setRequired(false)
             );
     }
 
-    private async generateSpeech(message: String, voice: VoiceId = VoiceId.Miguel): Promise<Readable | void> {
+    private async generateSpeech(
+        message: String,
+        voice: VoiceId = VoiceId.Miguel
+    ): Promise<Readable | void> {
         const args = message.split(" ");
 
         const res = await this.pollyClient

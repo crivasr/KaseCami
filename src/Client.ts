@@ -18,7 +18,11 @@ export default class DiscordClient extends Client {
     public readonly commandIds = new Map<string, string>();
     public readonly whitelist = ["285417245667229697"];
 
-    constructor(prefix: string, intents: GatewayIntentBits[], partials: Partials[]) {
+    constructor(
+        prefix: string,
+        intents: GatewayIntentBits[],
+        partials: Partials[]
+    ) {
         super({ intents, partials });
 
         this.prefix = prefix;
@@ -27,28 +31,37 @@ export default class DiscordClient extends Client {
     public isOwner(userId: string): boolean {
         return this.whitelist.includes(userId);
     }
-    
+
     public addCommand(command: Command): void {
         const name = command.commandBuilder().name;
         if (name == undefined) throw new Error("Missing name on command");
         this.commands.set(name, command);
     }
 
-    public registerEventHandler<T extends keyof ClientEvents>(event: T, handler: EventHandler<T>) {
+    public registerEventHandler<T extends keyof ClientEvents>(
+        event: T,
+        handler: EventHandler<T>
+    ) {
         this.on(event, (...args) => handler.handle(args));
     }
 
     public async deployCommands(testServers: string[]): Promise<void> {
         console.log(testServers);
         const user = this.user;
-        if (user == null || this.token == null) throw new Error("Not logged in");
+        if (user == null || this.token == null)
+            throw new Error("Not logged in");
 
-        const userCommands: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
-        const rootCommands: RESTPostAPIChatInputApplicationCommandsJSONBody[] = [];
+        const userCommands: RESTPostAPIChatInputApplicationCommandsJSONBody[] =
+            [];
+        const rootCommands: RESTPostAPIChatInputApplicationCommandsJSONBody[] =
+            [];
 
         this.commands.forEach((command) => {
             const json = command.commandBuilder().toJSON!();
-            if (command.category == Category.Root || command.category == Category.Test) {
+            if (
+                command.category == Category.Root ||
+                command.category == Category.Test
+            ) {
                 rootCommands.push(json);
             } else {
                 userCommands.push(json);
@@ -60,28 +73,37 @@ export default class DiscordClient extends Client {
         testServers.forEach(async (testServer) => {
             if (testServer == "") return;
 
-            await rest.put(Routes.applicationGuildCommands(user.id, testServer), {
-                body: rootCommands,
-            });
+            await rest.put(
+                Routes.applicationGuildCommands(user.id, testServer),
+                {
+                    body: rootCommands,
+                }
+            );
         });
 
-        await rest.put(Routes.applicationCommands(user.id), { body: userCommands });
+        await rest.put(Routes.applicationCommands(user.id), {
+            body: userCommands,
+        });
 
         console.log("Commands successfully deployed");
     }
 
     public async fetchCommands(): Promise<void> {
         const user = this.user;
-        if (user == null || this.token == null) throw new Error("Not logged in");
+        if (user == null || this.token == null)
+            throw new Error("Not logged in");
         const rest = new REST({ version: "10" }).setToken(this.token);
 
-        const res = (await rest.get(Routes.applicationCommands(user.id))) as {id: string, name:string}[];
+        const res = (await rest.get(Routes.applicationCommands(user.id))) as {
+            id: string;
+            name: string;
+        }[];
 
-        this.commandIds.clear(); 
+        this.commandIds.clear();
 
-        res.forEach(command => {
+        res.forEach((command) => {
             this.commandIds.set(command.name, command.id);
-        })
+        });
         console.log(this.commandIds);
     }
 }

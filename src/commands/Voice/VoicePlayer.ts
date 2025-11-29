@@ -35,7 +35,8 @@ export default class VoicePlayer extends AudioPlayer {
 
     public connect(voiceChannel: VoiceBasedChannel): VoiceConnection {
         const existingConnection = getVoiceConnection(this.guildId);
-        if (existingConnection?.joinConfig.channelId == voiceChannel.id) return existingConnection;
+        if (existingConnection?.joinConfig.channelId == voiceChannel.id)
+            return existingConnection;
 
         const connection = joinVoiceChannel({
             channelId: voiceChannel.id,
@@ -45,18 +46,29 @@ export default class VoicePlayer extends AudioPlayer {
 
         connection.subscribe(this);
 
-        connection.on(VoiceConnectionStatus.Disconnected, async (_oldState, _newState) => {
-            try {
-                await Promise.race([
-                    entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
-                    entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
-                ]);
-                // Seems to be reconnecting to a new channel - ignore disconnect
-            } catch (error) {
-                // Seems to be a real disconnect which SHOULDN'T be recovered from
-                connection.destroy();
+        connection.on(
+            VoiceConnectionStatus.Disconnected,
+            async (_oldState, _newState) => {
+                try {
+                    await Promise.race([
+                        entersState(
+                            connection,
+                            VoiceConnectionStatus.Signalling,
+                            5_000
+                        ),
+                        entersState(
+                            connection,
+                            VoiceConnectionStatus.Connecting,
+                            5_000
+                        ),
+                    ]);
+                    // Seems to be reconnecting to a new channel - ignore disconnect
+                } catch (error) {
+                    // Seems to be a real disconnect which SHOULDN'T be recovered from
+                    connection.destroy();
+                }
             }
-        });
+        );
 
         return connection;
     }

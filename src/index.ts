@@ -1,5 +1,4 @@
 import { Events, IntentsBitField, Partials } from "discord.js";
-import dotenv from "dotenv";
 
 import DiscordClient from "./Client";
 
@@ -16,9 +15,10 @@ import Block from "./commands/Root/Block";
 import Eval from "./commands/Root/Eval";
 import Dolar from "./commands/Utility/Dolar";
 
-// import { generateDependencyReport } from "@discordjs/voice";
-
+import dotenv from "dotenv";
 dotenv.config();
+
+import { generateDependencyReport } from "@discordjs/voice";
 
 const intents = [
     IntentsBitField.Flags.Guilds,
@@ -31,7 +31,11 @@ const intents = [
 
 const partials = [Partials.Message, Partials.Channel, Partials.Reaction];
 
-export const client = new DiscordClient(process.env.PREFIX ?? "¿", intents, partials);
+export const client = new DiscordClient(
+    process.env.PREFIX ?? "¿",
+    intents,
+    partials
+);
 
 connectToDatabase();
 
@@ -47,14 +51,19 @@ client.addCommand(new Eval(client));
 
 client.addCommand(new Dolar(client));
 
-client.registerEventHandler(Events.InteractionCreate, new InteractionHandler(client));
+client.registerEventHandler(
+    Events.InteractionCreate,
+    new InteractionHandler(client)
+);
 client.registerEventHandler(Events.MessageCreate, new MessageHandler(client));
 
 client.login(process.env.CLIENT_TOKEN ?? "");
 
 client.once(Events.ClientReady, async (client) => {
-    // console.log(generateDependencyReport());
+    console.log(generateDependencyReport());
     console.log(`Bot ${client.user.username} is ready.`);
-    await (client as DiscordClient).deployCommands(process.env.TEST_SERVERS?.split("/") ?? []);
+    await (client as DiscordClient).deployCommands(
+        process.env.TEST_SERVERS?.split("/") ?? []
+    );
     await (client as DiscordClient).fetchCommands();
 });
